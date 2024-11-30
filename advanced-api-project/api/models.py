@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.auth.models import User
 
 # Create your models here.
 class Author(models.Model):
@@ -13,7 +14,8 @@ class Author(models.Model):
 class Book(models.Model):
     title = models.CharField(max_length=50)
     publication_year = models.SmallIntegerField()
-    author = models.ForeignKey(Author, on_delete=models.CASCADE, related_name='books')  # Use lowercase and ensure 'Author' is defined.
+    author = models.ForeignKey(Author, on_delete=models.CASCADE, related_name='books')
+    added_by = models.ForeignKey(User, on_delete=models.CASCADE)  # Use lowercase and ensure 'Author' is defined.
 
     def __str__(self):
         return f"{self.title} published in the year {self.publication_year} by {self.author}"
