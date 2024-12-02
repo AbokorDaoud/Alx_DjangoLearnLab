@@ -38,6 +38,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'blog.apps.BlogConfig',
+    'crispy_forms',
+    'crispy_bootstrap5',
     'taggit',
 ]
 
@@ -130,6 +132,10 @@ STATICFILES_DIRS = [
 LOGIN_REDIRECT_URL = 'home'
 LOGOUT_REDIRECT_URL = 'home'
 LOGIN_URL = 'login'
+
+# Taggit Settings
+TAGGIT_CASE_INSENSITIVE = True
+TAGGIT_STRIP_UNICODE_WHEN_SLUGIFYING = True
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field

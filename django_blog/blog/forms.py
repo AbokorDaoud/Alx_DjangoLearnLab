@@ -2,7 +2,8 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 from .models import Post, Comment
-from taggit.forms import TagWidget
+from taggit.forms import TagField, TagWidget
+from taggit.models import Tag
 
 class UserRegistrationForm(UserCreationForm):
     email = forms.EmailField(widget=forms.EmailInput(attrs={
@@ -40,6 +41,14 @@ class UserRegistrationForm(UserCreationForm):
         return user
 
 class PostForm(forms.ModelForm):
+    tags = TagField(
+        required=False,
+        widget=TagWidget(attrs={
+            'class': 'form-control',
+            'placeholder': 'Enter tags (comma separated)'
+        })
+    )
+
     class Meta:
         model = Post
         fields = ['title', 'content', 'tags']
@@ -52,10 +61,6 @@ class PostForm(forms.ModelForm):
                 'class': 'form-control',
                 'rows': 5,
                 'placeholder': 'Write your post content here'
-            }),
-            'tags': TagWidget(attrs={
-                'class': 'form-control',
-                'placeholder': 'Enter tags separated by commas'
             })
         }
 
@@ -82,17 +87,28 @@ class CommentForm(forms.ModelForm):
 
 class SearchForm(forms.Form):
     query = forms.CharField(
-        max_length=100,
         required=False,
         widget=forms.TextInput(attrs={
             'class': 'form-control',
             'placeholder': 'Search posts...'
         })
     )
-    tag = forms.CharField(
+    tag = forms.ModelChoiceField(
+        queryset=Tag.objects.all(),
         required=False,
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Filter by tag...'
+        empty_label="Select a tag",
+        widget=forms.Select(attrs={
+            'class': 'form-control'
         })
     )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        query = cleaned_data.get('query')
+        tag = cleaned_data.get('tag')
+        
+        if not query and not tag:
+            raise forms.ValidationError(
+                "Please enter a search term or select a tag"
+            )
+        return cleaned_data

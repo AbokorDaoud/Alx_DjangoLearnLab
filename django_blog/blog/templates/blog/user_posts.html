@@ -6,6 +6,15 @@
     <div class="row">
         <!-- Main Content -->
         <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h1 class="card-title">
+                        Posts by {{ username }}
+                        <span class="badge bg-secondary">{{ page_obj.paginator.count }} posts</span>
+                    </h1>
+                </div>
+            </div>
+
             {% if posts %}
                 {% for post in posts %}
                     <article class="card mb-4">
@@ -17,11 +26,7 @@
                             </h2>
                             <div class="post-metadata mb-3">
                                 <small class="text-muted">
-                                    Posted by 
-                                    <a href="{% url 'user-posts' post.author.username %}" class="text-decoration-none">
-                                        {{ post.author }}
-                                    </a> 
-                                    on {{ post.published_date|date:"F d, Y" }}
+                                    Posted on {{ post.published_date|date:"F d, Y" }}
                                 </small>
                             </div>
                             
@@ -82,7 +87,7 @@
                 {% endif %}
             {% else %}
                 <div class="alert alert-info">
-                    No posts found.
+                    No posts found for this user.
                 </div>
             {% endif %}
         </div>
@@ -91,47 +96,22 @@
         <div class="col-md-4">
             <!-- Search Form -->
             <div class="card mb-4">
-                <div class="card-header">
-                    <h4 class="card-title h5 mb-0">Search</h4>
-                </div>
                 <div class="card-body">
-                    <form method="GET" action="{% url 'post-search' %}" class="row g-3">
+                    <form method="GET" action="{% url 'post-search' %}">
                         {{ search_form.as_p }}
                         <button type="submit" class="btn btn-primary w-100">Search</button>
                     </form>
                 </div>
             </div>
 
-            <!-- Popular Tags -->
-            {% if tags %}
+            <!-- Back to All Posts -->
             <div class="card mb-4">
-                <div class="card-header">
-                    <h4 class="card-title h5 mb-0">Popular Tags</h4>
-                </div>
                 <div class="card-body">
-                    <div class="tags-cloud">
-                        {% for tag in tags %}
-                            <a href="{% url 'posts-by-tag' tag.slug %}" 
-                               class="badge bg-secondary text-decoration-none tag-item"
-                               title="{{ tag.post_count }} posts">
-                                {{ tag.name }} ({{ tag.post_count }})
-                            </a>
-                        {% endfor %}
-                    </div>
+                    <a href="{% url 'post-list' %}" class="btn btn-outline-primary w-100">
+                        View All Posts
+                    </a>
                 </div>
             </div>
-            {% endif %}
-
-            <!-- Create Post -->
-            {% if user.is_authenticated %}
-                <div class="card">
-                    <div class="card-body">
-                        <a href="{% url 'post-create' %}" class="btn btn-success w-100">
-                            Create New Post
-                        </a>
-                    </div>
-                </div>
-            {% endif %}
         </div>
     </div>
 </div>
@@ -141,18 +121,6 @@
         margin: 0.2rem;
         padding: 0.5rem 0.8rem;
         font-size: 0.9rem;
-    }
-    .tags-cloud {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.5rem;
-    }
-    .tag-item {
-        transition: all 0.2s ease-in-out;
-    }
-    .tag-item:hover {
-        transform: scale(1.1);
-        background-color: #0d6efd;
     }
     .post-content {
         color: #555;

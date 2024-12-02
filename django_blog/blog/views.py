@@ -88,6 +88,21 @@ class TagPostListView(ListView):
         context['tag'] = self.kwargs.get('tag_name')
         return context
 
+class UserPostListView(ListView):
+    model = Post
+    template_name = 'blog/user_posts.html'
+    context_object_name = 'posts'
+    paginate_by = 5
+
+    def get_queryset(self):
+        user = get_object_or_404(User, username=self.kwargs.get('username'))
+        return Post.objects.filter(author=user).order_by('-published_date')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['username'] = self.kwargs.get('username')
+        return context
+
 class PostDetailView(DetailView):
     model = Post
     template_name = 'blog/post_detail.html'
@@ -246,23 +261,36 @@ def tag_autocomplete(request):
 
 def post_search(request):
     form = SearchForm(request.GET)
-    results = []
-    query = request.GET.get('query', '')
-    tag = request.GET.get('tag', '')
+    posts = Post.objects.all()
+    query = None
+    tag = None
     
-    if query or tag:
-        posts = Post.objects.all()
+    if form.is_valid():
+        query = form.cleaned_data.get('query')
+        tag = form.cleaned_data.get('tag')
+        
         if query:
-            posts = posts.filter(title__icontains=query) | posts.filter(content__icontains=query)
+            posts = posts.filter(
+                Q(title__icontains=query) |
+                Q(content__icontains=query) |
+                Q(author__username__icontains=query)
+            )
+        
         if tag:
-            posts = posts.filter(tags__name__in=[tag])
-        results = posts.distinct().order_by('-published_date')
+            posts = posts.filter(tags__name__in=[tag.name])
+    
+    # Get popular tags for sidebar
+    tags = Tag.objects.annotate(
+        post_count=Count('taggit_taggeditem_items')
+    ).order_by('-post_count')[:10]
     
     context = {
         'form': form,
+        'posts': posts,
         'query': query,
         'tag': tag,
-        'results': results,
-        'tags': Tag.objects.annotate(post_count=Count('taggit_taggeditem_items'))
+        'tags': tags,
+        'title': 'Search Results'
     }
+    
     return render(request, 'blog/search_results.html', context)
