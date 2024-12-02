@@ -23,6 +23,12 @@
                 </div>
                 <div class="post-footer">
                     <a href="{% url 'post-detail' post.pk %}" class="read-more">Read More</a>
+                    {% if user == post.author %}
+                        <div class="post-actions">
+                            <a href="{% url 'post-update' post.pk %}" class="btn btn-edit">Update Post</a>
+                            <a href="{% url 'post-delete' post.pk %}" class="btn btn-delete">Delete Post</a>
+                        </div>
+                    {% endif %}
                 </div>
             </article>
         {% endfor %}
