@@ -277,8 +277,7 @@ def post_search(request):
             )
         
         if tag:
-            posts = posts.filter(tags__name__in=[tag.name])
-    
+            posts = posts.filter(tags__name__icontains=tag.name)
     # Get popular tags for sidebar
     tags = Tag.objects.annotate(
         post_count=Count('taggit_taggeditem_items')
