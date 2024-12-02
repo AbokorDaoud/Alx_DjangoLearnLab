@@ -46,7 +46,7 @@ class PostForm(forms.ModelForm):
         widget=TagWidget(attrs={
             'class': 'form-control',
             'placeholder': 'Enter tags (comma separated)'
-        })
+        })  # Explicitly call TagWidget with parentheses
     )
 
     class Meta:
