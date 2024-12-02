@@ -1,9 +1,15 @@
 {% extends "blog/base.html" %}
+{% load static %}
 {% block title %}Home{% endblock %}
 
 {% block content %}
-<div class="content-section">
+<div class="welcome-section">
+    <img src="{% static 'images/welcome.jpg' %}" alt="Welcome Image" class="welcome-image">
     <h1>Welcome to Django Blog</h1>
+    <p>Your go-to platform for insightful articles and engaging discussions.</p>
+    <a href="{% url 'post-list' %}" class="btn btn-primary">Explore Posts</a>
+</div>
+<div class="content-section">
     {% if user.is_authenticated %}
         <p>Hello, {{ user.username }}!</p>
         <p>View your <a href="{% url 'profile' %}">profile</a> or start browsing posts.</p>

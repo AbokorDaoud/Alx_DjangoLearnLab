@@ -40,6 +40,9 @@ urlpatterns = [
     path('tags/', views.tag_list, name='tag-list'),
     path('tags/autocomplete/', views.tag_autocomplete, name='tag-autocomplete'),
     
+    # Search URL
+    path('search/', views.post_search, name='post-search'),
+    
     # Authentication URLs
     path('password-reset/',
          auth_views.PasswordResetView.as_view(template_name='blog/password_reset.html'),
