@@ -52,22 +52,25 @@ class PostDetailView(DetailView):
         context['comments'] = self.object.comments.all()
         context['comment_form'] = CommentForm()
         return context
-        
-    def post(self, request, *args, **kwargs):
-        post = self.get_object()
-        if request.user.is_authenticated:
-            form = CommentForm(request.POST)
-            if form.is_valid():
-                comment = form.save(commit=False)
-                comment.post = post
-                comment.author = request.user
-                comment.save()
-                messages.success(request, 'Your comment has been added.')
-            else:
-                messages.error(request, 'Error adding comment.')
-        else:
-            messages.error(request, 'Please log in to comment.')
-        return HttpResponseRedirect(reverse('post-detail', kwargs={'pk': post.pk}))
+
+class CommentCreateView(LoginRequiredMixin, CreateView):
+    model = Comment
+    form_class = CommentForm
+    template_name = 'blog/comment_create.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['post'] = get_object_or_404(Post, pk=self.kwargs['post_id'])
+        return context
+
+    def form_valid(self, form):
+        form.instance.author = self.request.user
+        form.instance.post = get_object_or_404(Post, pk=self.kwargs['post_id'])
+        messages.success(self.request, 'Your comment has been added successfully.')
+        return super().form_valid(form)
+    
+    def get_success_url(self):
+        return reverse('post-detail', kwargs={'pk': self.kwargs['post_id']})
 
 class PostCreateView(LoginRequiredMixin, CreateView):
     model = Post
