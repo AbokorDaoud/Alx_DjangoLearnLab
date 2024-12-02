@@ -1,0 +1,16 @@
+{% extends "blog/base.html" %}
+{% block title %}Delete Comment{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <h2>Delete Comment</h2>
+    <p>Are you sure you want to delete your comment on "{{ comment.post.title }}"?</p>
+    <form method="post">
+        {% csrf_token %}
+        <div class="form-actions">
+            <button type="submit" class="btn btn-danger">Delete Comment</button>
+            <a href="{{ comment.post.get_absolute_url }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

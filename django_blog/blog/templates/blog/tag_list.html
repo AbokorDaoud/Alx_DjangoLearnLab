@@ -1,0 +1,48 @@
+{% extends "blog/base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                <div class="card-header">
+                    <h1 class="card-title mb-0">All Tags</h1>
+                </div>
+                <div class="card-body">
+                    <div class="tags-cloud">
+                        {% if tags %}
+                            {% for tag in tags %}
+                                <a href="{% url 'posts-by-tag' tag.slug %}" 
+                                   class="badge bg-secondary text-decoration-none tag-item"
+                                   title="{{ tag.post_count }} posts">
+                                    {{ tag.name }} ({{ tag.post_count }})
+                                </a>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-muted">No tags found.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .tags-cloud {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+    .tag-item {
+        padding: 0.5rem 1rem;
+        font-size: 1rem;
+        transition: all 0.2s ease-in-out;
+    }
+    .tag-item:hover {
+        transform: scale(1.1);
+        background-color: #0d6efd;
+    }
+</style>
+{% endblock %}
