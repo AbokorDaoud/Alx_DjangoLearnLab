@@ -43,10 +43,7 @@ class UserRegistrationForm(UserCreationForm):
 class PostForm(forms.ModelForm):
     tags = TagField(
         required=False,
-        widget=TagWidget(attrs={
-            'class': 'form-control',
-            'placeholder': 'Enter tags (comma separated)'
-        })  # Explicitly call TagWidget with parentheses
+        widget=TagWidget()  # Explicitly call TagWidget with parentheses
     )
 
     class Meta:
