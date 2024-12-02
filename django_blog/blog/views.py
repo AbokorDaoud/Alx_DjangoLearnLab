@@ -60,17 +60,17 @@ class CommentCreateView(LoginRequiredMixin, CreateView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['post'] = get_object_or_404(Post, pk=self.kwargs['post_id'])
+        context['post'] = get_object_or_404(Post, pk=self.kwargs['pk'])
         return context
 
     def form_valid(self, form):
         form.instance.author = self.request.user
-        form.instance.post = get_object_or_404(Post, pk=self.kwargs['post_id'])
+        form.instance.post = get_object_or_404(Post, pk=self.kwargs['pk'])
         messages.success(self.request, 'Your comment has been added successfully.')
         return super().form_valid(form)
     
     def get_success_url(self):
-        return reverse('post-detail', kwargs={'pk': self.kwargs['post_id']})
+        return reverse('post-detail', kwargs={'pk': self.kwargs['pk']})
 
 class PostCreateView(LoginRequiredMixin, CreateView):
     model = Post
