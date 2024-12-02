@@ -221,3 +221,48 @@ def add_comment(request, pk):
             return redirect('post-detail', pk=pk)
     
     return redirect('post-detail', pk=pk)
+
+def posts_by_tag(request, tag_slug):
+    tag = get_object_or_404(Tag, slug=tag_slug)
+    posts = Post.objects.filter(tags__name__in=[tag.name]).order_by('-published_date')
+    context = {
+        'tag': tag,
+        'posts': posts,
+        'tags': Tag.objects.annotate(post_count=Count('taggit_taggeditem_items')),
+        'search_form': SearchForm()
+    }
+    return render(request, 'blog/tag_posts.html', context)
+
+def tag_list(request):
+    tags = Tag.objects.annotate(post_count=Count('taggit_taggeditem_items')).order_by('-post_count')
+    return render(request, 'blog/tag_list.html', {'tags': tags})
+
+def tag_autocomplete(request):
+    query = request.GET.get('q', '')
+    if query:
+        tags = Tag.objects.filter(name__icontains=query).values_list('name', flat=True)
+        return JsonResponse(list(tags), safe=False)
+    return JsonResponse([], safe=False)
+
+def post_search(request):
+    form = SearchForm(request.GET)
+    results = []
+    query = request.GET.get('query', '')
+    tag = request.GET.get('tag', '')
+    
+    if query or tag:
+        posts = Post.objects.all()
+        if query:
+            posts = posts.filter(title__icontains=query) | posts.filter(content__icontains=query)
+        if tag:
+            posts = posts.filter(tags__name__in=[tag])
+        results = posts.distinct().order_by('-published_date')
+    
+    context = {
+        'form': form,
+        'query': query,
+        'tag': tag,
+        'results': results,
+        'tags': Tag.objects.annotate(post_count=Count('taggit_taggeditem_items'))
+    }
+    return render(request, 'blog/search_results.html', context)

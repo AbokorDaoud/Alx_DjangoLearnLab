@@ -55,9 +55,15 @@ class PostForm(forms.ModelForm):
             }),
             'tags': TagWidget(attrs={
                 'class': 'form-control',
-                'placeholder': 'Enter tags (comma separated)'
+                'placeholder': 'Enter tags separated by commas'
             })
         }
+
+    def clean_tags(self):
+        tags = self.cleaned_data.get('tags')
+        if tags and len(tags) > 10:
+            raise forms.ValidationError("Maximum 10 tags allowed per post.")
+        return tags
 
 class CommentForm(forms.ModelForm):
     class Meta:

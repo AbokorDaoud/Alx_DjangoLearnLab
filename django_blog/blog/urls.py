@@ -11,6 +11,7 @@ from .views import (
     CommentUpdateView,
     CommentDeleteView,
     TagPostListView,
+    UserPostListView,
 )
 
 urlpatterns = [
@@ -22,6 +23,7 @@ urlpatterns = [
     
     # Blog post URLs
     path('posts/', PostListView.as_view(), name='post-list'),
+    path('user/<str:username>/', UserPostListView.as_view(), name='user-posts'),
     path('post/<int:pk>/', PostDetailView.as_view(), name='post-detail'),
     path('post/new/', PostCreateView.as_view(), name='post-create'),
     path('post/<int:pk>/update/', PostUpdateView.as_view(), name='post-update'),
@@ -34,7 +36,9 @@ urlpatterns = [
     
     # Tag URLs
     path('tag/<str:tag_name>/', TagPostListView.as_view(), name='tag-posts'),
-    path('tag/<slug:tag_slug>/', views.tag_posts, name='posts-by-tag'),
+    path('tag/<slug:tag_slug>/', views.posts_by_tag, name='posts-by-tag'),
+    path('tags/', views.tag_list, name='tag-list'),
+    path('tags/autocomplete/', views.tag_autocomplete, name='tag-autocomplete'),
     
     # Authentication URLs
     path('password-reset/',
