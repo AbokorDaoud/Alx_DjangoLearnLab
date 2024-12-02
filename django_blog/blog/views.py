@@ -12,7 +12,7 @@ from django.views.generic import (
     DeleteView
 )
 from django.urls import reverse_lazy, reverse
-from django.db.models import Q
+from django.db.models import Q, Count
 from .models import Post, Comment
 from .forms import PostForm, CommentForm, UserRegistrationForm, SearchForm
 from taggit.models import Tag
@@ -51,30 +51,27 @@ class PostListView(ListView):
     ordering = ['-published_date']
     paginate_by = 5
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['search_form'] = SearchForm(self.request.GET or None)
+        context['tags'] = Tag.objects.annotate(post_count=Count('taggit_taggeditem_items')).order_by('-post_count')[:10]
+        return context
+
     def get_queryset(self):
         queryset = super().get_queryset()
-        form = SearchForm(self.request.GET)
+        search_form = SearchForm(self.request.GET or None)
         
-        if form.is_valid():
-            query = form.cleaned_data.get('query')
-            tag = form.cleaned_data.get('tag')
+        if search_form.is_valid():
+            query = search_form.cleaned_data.get('query')
+            tag = search_form.cleaned_data.get('tag')
             
             if query:
-                queryset = queryset.filter(
-                    Q(title__icontains=query) |
-                    Q(content__icontains=query)
-                ).distinct()
+                queryset = queryset.filter(title__icontains=query) | queryset.filter(content__icontains=query)
             
             if tag:
                 queryset = queryset.filter(tags__name__in=[tag])
         
-        return queryset
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['search_form'] = SearchForm(self.request.GET)
-        context['tags'] = Tag.objects.all()
-        return context
+        return queryset.distinct()
 
 class TagPostListView(ListView):
     model = Post
@@ -94,15 +91,19 @@ class TagPostListView(ListView):
 class PostDetailView(DetailView):
     model = Post
     template_name = 'blog/post_detail.html'
-    context_object_name = 'post'
-
+    
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['comments'] = self.object.comments.all()
+        post = self.get_object()
+        
         # Get similar posts based on tags
-        post_tags = self.object.tags.all()
-        similar_posts = Post.objects.filter(tags__in=post_tags).exclude(id=self.object.id).distinct()[:3]
+        post_tags_ids = post.tags.values_list('id', flat=True)
+        similar_posts = Post.objects.filter(tags__in=post_tags_ids).exclude(id=post.id)
+        similar_posts = similar_posts.annotate(same_tags=Count('tags')).order_by('-same_tags', '-published_date')[:3]
+        
         context['similar_posts'] = similar_posts
+        context['comment_form'] = CommentForm()
+        context['comments'] = post.comments.all().order_by('-created_at')
         return context
 
 class CommentCreateView(LoginRequiredMixin, CreateView):
@@ -128,10 +129,11 @@ class PostCreateView(LoginRequiredMixin, CreateView):
     model = Post
     form_class = PostForm
     template_name = 'blog/post_form.html'
+    success_url = reverse_lazy('post-list')
 
     def form_valid(self, form):
         form.instance.author = self.request.user
-        messages.success(self.request, 'Your post has been created!')
+        messages.success(self.request, 'Post created successfully!')
         return super().form_valid(form)
 
 class PostUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
@@ -141,16 +143,19 @@ class PostUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
 
     def form_valid(self, form):
         form.instance.author = self.request.user
-        messages.success(self.request, 'Your post has been updated!')
+        messages.success(self.request, 'Post updated successfully!')
         return super().form_valid(form)
 
     def test_func(self):
         post = self.get_object()
         return self.request.user == post.author
 
+    def get_success_url(self):
+        return reverse('post-detail', kwargs={'pk': self.object.pk})
+
 class PostDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
     model = Post
-    success_url = '/'
+    success_url = reverse_lazy('post-list')
     template_name = 'blog/post_confirm_delete.html'
 
     def test_func(self):
@@ -158,7 +163,7 @@ class PostDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
         return self.request.user == post.author
 
     def delete(self, request, *args, **kwargs):
-        messages.success(self.request, 'Your post has been deleted!')
+        messages.success(self.request, 'Post deleted successfully!')
         return super().delete(request, *args, **kwargs)
 
 class CommentUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
@@ -189,14 +194,30 @@ class CommentDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
         messages.success(self.request, 'Your comment has been deleted!')
         return super().delete(request, *args, **kwargs)
 
-def register(request):
+def tag_posts(request, tag_slug):
+    tag = get_object_or_404(Tag, slug=tag_slug)
+    posts = Post.objects.filter(tags__in=[tag]).order_by('-published_date')
+    
+    context = {
+        'tag': tag,
+        'posts': posts,
+        'search_form': SearchForm(),
+        'tags': Tag.objects.annotate(post_count=Count('taggit_taggeditem_items')).order_by('-post_count')[:10]
+    }
+    return render(request, 'blog/tag_posts.html', context)
+
+@login_required
+def add_comment(request, pk):
+    post = get_object_or_404(Post, pk=pk)
+    
     if request.method == 'POST':
-        form = UserRegistrationForm(request.POST)
+        form = CommentForm(request.POST)
         if form.is_valid():
-            form.save()
-            username = form.cleaned_data.get('username')
-            messages.success(request, f'Account created for {username}! You can now log in.')
-            return redirect('login')
-    else:
-        form = UserRegistrationForm()
-    return render(request, 'blog/register.html', {'form': form})
+            comment = form.save(commit=False)
+            comment.post = post
+            comment.author = request.user
+            comment.save()
+            messages.success(request, 'Comment added successfully!')
+            return redirect('post-detail', pk=pk)
+    
+    return redirect('post-detail', pk=pk)
