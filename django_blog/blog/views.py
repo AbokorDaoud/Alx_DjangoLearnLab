@@ -1,13 +1,20 @@
-from django.shortcuts import render, redirect, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth import login, authenticate
 from django.contrib.auth.decorators import login_required
-from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
+from django.contrib.auth.forms import UserCreationForm
+from django.contrib import messages
+from django.views.generic import (
+    ListView,
+    DetailView,
+    CreateView,
+    UpdateView,
+    DeleteView
+)
 from django.urls import reverse_lazy, reverse
-from django.http import HttpResponseRedirect
-from .models import Post, Comment
-from .forms import UserRegistrationForm, PostForm, CommentForm
+from django.db.models import Q
+from .models import Post, Comment, Tag
+from .forms import PostForm, CommentForm, UserRegistrationForm, SearchForm
 
 def register(request):
     if request.method == 'POST':
@@ -43,10 +50,52 @@ class PostListView(ListView):
     ordering = ['-published_date']
     paginate_by = 5
 
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        form = SearchForm(self.request.GET)
+        
+        if form.is_valid():
+            query = form.cleaned_data.get('query')
+            tag = form.cleaned_data.get('tag')
+            
+            if query:
+                queryset = queryset.filter(
+                    Q(title__icontains=query) |
+                    Q(content__icontains=query) |
+                    Q(tags__name__icontains=query)
+                ).distinct()
+            
+            if tag:
+                queryset = queryset.filter(tags=tag)
+        
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['search_form'] = SearchForm(self.request.GET)
+        return context
+
+class TagPostListView(ListView):
+    model = Post
+    template_name = 'blog/tag_posts.html'
+    context_object_name = 'posts'
+    paginate_by = 5
+
+    def get_queryset(self):
+        tag_name = self.kwargs.get('tag_name')
+        tag = get_object_or_404(Tag, name=tag_name)
+        return Post.objects.filter(tags=tag).order_by('-published_date')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['tag'] = get_object_or_404(Tag, name=self.kwargs.get('tag_name'))
+        return context
+
 class PostDetailView(DetailView):
     model = Post
     template_name = 'blog/post_detail.html'
-    
+    context_object_name = 'post'
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['comments'] = self.object.comments.all()

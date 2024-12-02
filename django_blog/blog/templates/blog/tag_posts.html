@@ -1,25 +1,10 @@
 {% extends "blog/base.html" %}
-{% block title %}Blog Posts{% endblock %}
+{% block title %}Posts tagged with "{{ tag.name }}"{% endblock %}
 
 {% block content %}
-<div class="post-list">
-    <div class="search-section">
-        <form method="get" class="search-form">
-            {{ search_form.query }}
-            {{ search_form.tag }}
-            <button type="submit" class="btn btn-primary">Search</button>
-            {% if request.GET.query or request.GET.tag %}
-                <a href="{% url 'post-list' %}" class="btn btn-secondary">Clear</a>
-            {% endif %}
-        </form>
-    </div>
-
-    {% if user.is_authenticated %}
-        <div class="create-post">
-            <a href="{% url 'post-create' %}" class="btn btn-primary">Create New Post</a>
-        </div>
-    {% endif %}
-
+<div class="tag-posts">
+    <h1>Posts tagged with "{{ tag.name }}"</h1>
+    
     {% if posts %}
         <div class="posts">
             {% for post in posts %}
@@ -38,15 +23,6 @@
                         {% for tag in post.tags.all %}
                             <a href="{% url 'tag-posts' tag.name %}" class="tag">{{ tag.name }}</a>
                         {% endfor %}
-                    </div>
-                    <div class="post-footer">
-                        <a href="{% url 'post-detail' post.pk %}" class="read-more">Read More</a>
-                        {% if user == post.author %}
-                            <div class="post-actions">
-                                <a href="{% url 'post-update' post.pk %}" class="btn btn-edit">Update Post</a>
-                                <a href="{% url 'post-delete' post.pk %}" class="btn btn-delete">Delete Post</a>
-                            </div>
-                        {% endif %}
                     </div>
                 </article>
             {% endfor %}
@@ -74,7 +50,11 @@
             </div>
         {% endif %}
     {% else %}
-        <p class="no-posts">No posts found.</p>
+        <p class="no-posts">No posts found with this tag.</p>
     {% endif %}
+
+    <div class="back-link">
+        <a href="{% url 'post-list' %}" class="btn btn-back">Back to All Posts</a>
+    </div>
 </div>
 {% endblock %}
