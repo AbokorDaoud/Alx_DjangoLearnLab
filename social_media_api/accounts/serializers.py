@@ -6,26 +6,21 @@ from rest_framework.authtoken.models import Token
 User = get_user_model()
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
+    email = serializers.CharField()
+    username = serializers.CharField()
     password = serializers.CharField(
         write_only=True,
-        required=True,
         style={'input_type': 'password'},
         validators=[validate_password]
     )
     password2 = serializers.CharField(
         write_only=True,
-        required=True,
         style={'input_type': 'password'}
     )
 
     class Meta:
         model = User
-        fields = ('username', 'password', 'password2', 'email', 'first_name', 'last_name', 'bio')
-        extra_kwargs = {
-            'first_name': {'required': True},
-            'last_name': {'required': True},
-            'email': {'required': True}
-        }
+        fields = ('username', 'email', 'password', 'password2', 'first_name', 'last_name', 'bio')
 
     def validate(self, attrs):
         if attrs['password'] != attrs['password2']:
@@ -35,7 +30,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         validated_data.pop('password2')
         password = validated_data.pop('password')
-        user = User.objects.create_user(**validated_data)
+        user = get_user_model().objects.create_user(**validated_data, password=password)
         user.set_password(password)
         user.save()
         Token.objects.create(user=user)
