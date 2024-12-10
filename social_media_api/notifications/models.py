@@ -2,6 +2,7 @@ from django.db import models
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
+from django.utils import timezone
 
 class Notification(models.Model):
     NOTIFICATION_TYPES = (
@@ -19,13 +20,13 @@ class Notification(models.Model):
     object_id = models.PositiveIntegerField()
     target = GenericForeignKey('content_type', 'object_id')
     
-    created_at = models.DateTimeField(auto_now_add=True)
+    timestamp = models.DateTimeField(default=timezone.now, db_index=True)
     is_read = models.BooleanField(default=False)
 
     class Meta:
-        ordering = ['-created_at']
+        ordering = ['-timestamp']
         indexes = [
-            models.Index(fields=['recipient', 'is_read', '-created_at']),
+            models.Index(fields=['recipient', 'is_read', '-timestamp']),
         ]
 
     def __str__(self):
