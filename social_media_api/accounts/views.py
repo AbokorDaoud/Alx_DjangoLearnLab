@@ -1,11 +1,12 @@
 from django.shortcuts import render
-from rest_framework import generics, permissions, status
+from rest_framework import generics, permissions, status, viewsets
 from rest_framework.response import Response
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.authtoken.models import Token
 from rest_framework.views import APIView
 from django.contrib.auth import get_user_model
 from .serializers import UserRegistrationSerializer, UserSerializer
+from rest_framework.decorators import action
 
 User = get_user_model()
 
@@ -43,6 +44,50 @@ class ProfileView(generics.RetrieveUpdateAPIView):
 
     def get_object(self):
         return self.request.user
+
+class UserViewSet(viewsets.ModelViewSet):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = (permissions.IsAuthenticated,)
+
+    @action(detail=True, methods=['post'])
+    def follow(self, request, pk=None):
+        user_to_follow = self.get_object()
+        if request.user == user_to_follow:
+            return Response(
+                {'error': 'You cannot follow yourself.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        request.user.follow(user_to_follow)
+        return Response(
+            {'message': f'You are now following {user_to_follow.username}'},
+            status=status.HTTP_200_OK
+        )
+
+    @action(detail=True, methods=['post'])
+    def unfollow(self, request, pk=None):
+        user_to_unfollow = self.get_object()
+        if request.user == user_to_unfollow:
+            return Response(
+                {'error': 'You cannot unfollow yourself.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        request.user.unfollow(user_to_unfollow)
+        return Response(
+            {'message': f'You have unfollowed {user_to_unfollow.username}'},
+            status=status.HTTP_200_OK
+        )
+
+    @action(detail=False, methods=['get'])
+    def following(self, request):
+        user = request.user
+        following = user.following.all()
+        page = self.paginate_queryset(following)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        serializer = self.get_serializer(following, many=True)
+        return Response(serializer.data)
 
 class FollowUserView(APIView):
     permission_classes = (permissions.IsAuthenticated,)

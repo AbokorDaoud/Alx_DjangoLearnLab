@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from rest_framework import viewsets, permissions, filters
+from rest_framework import viewsets, permissions, filters, response
 from rest_framework.pagination import PageNumberPagination
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import Post, Comment
@@ -28,6 +28,21 @@ class PostViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
+
+    @action(detail=False, methods=['get'])
+    def feed(self, request):
+        """
+        Returns a feed of posts from users that the current user follows,
+        ordered by creation date (newest first).
+        """
+        following_users = request.user.following.all()
+        queryset = self.get_queryset().filter(author__in=following_users)
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        serializer = self.get_serializer(queryset, many=True)
+        return response.Response(serializer.data)
 
 class CommentViewSet(viewsets.ModelViewSet):
     queryset = Comment.objects.all()
