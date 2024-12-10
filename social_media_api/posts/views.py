@@ -4,6 +4,8 @@ from rest_framework.pagination import PageNumberPagination
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import Post, Comment
 from .serializers import PostSerializer, CommentSerializer
+from rest_framework.decorators import action
+from rest_framework.response import Response
 
 class StandardResultsSetPagination(PageNumberPagination):
     page_size = 10
@@ -36,13 +38,13 @@ class PostViewSet(viewsets.ModelViewSet):
         ordered by creation date (newest first).
         """
         following_users = request.user.following.all()
-        queryset = self.get_queryset().filter(author__in=following_users)
-        page = self.paginate_queryset(queryset)
+        posts = Post.objects.filter(author__in=following_users).order_by('-created_at')
+        page = self.paginate_queryset(posts)
         if page is not None:
             serializer = self.get_serializer(page, many=True)
             return self.get_paginated_response(serializer.data)
-        serializer = self.get_serializer(queryset, many=True)
-        return response.Response(serializer.data)
+        serializer = self.get_serializer(posts, many=True)
+        return Response(serializer.data)
 
 class CommentViewSet(viewsets.ModelViewSet):
     queryset = Comment.objects.all()
