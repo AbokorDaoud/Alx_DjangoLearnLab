@@ -43,6 +43,9 @@ SECURE_HSTS_SECONDS = 31536000  # 1 year
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
 
+# Server Configuration
+PORT = int(os.environ.get('PORT', 8000))
+
 # Application definition
 
 INSTALLED_APPS = [
