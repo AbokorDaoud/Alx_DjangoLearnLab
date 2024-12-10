@@ -7,12 +7,11 @@ from rest_framework.views import APIView
 from django.contrib.auth import get_user_model
 from .serializers import UserRegistrationSerializer, UserSerializer
 from rest_framework.decorators import action
-from .models import CustomUser
 
-User = CustomUser
+User = get_user_model()
 
 class RegisterView(generics.GenericAPIView):
-    queryset = CustomUser.objects.all()
+    queryset = User.objects.all()
     serializer_class = UserRegistrationSerializer
     permission_classes = (permissions.AllowAny,)
 
@@ -47,7 +46,7 @@ class ProfileView(generics.RetrieveUpdateAPIView):
         return self.request.user
 
 class UserViewSet(viewsets.ModelViewSet):
-    queryset = CustomUser.objects.all()
+    queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = (permissions.IsAuthenticated,)
 
@@ -91,7 +90,7 @@ class UserViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 class UserProfileView(generics.RetrieveUpdateAPIView):
-    queryset = CustomUser.objects.all()
+    queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = (permissions.IsAuthenticated,)
 
@@ -103,7 +102,7 @@ class FollowUserView(APIView):
 
     def post(self, request, user_id):
         try:
-            user_to_follow = CustomUser.objects.get(id=user_id)
+            user_to_follow = User.objects.get(id=user_id)
             if request.user == user_to_follow:
                 return Response(
                     {'error': 'You cannot follow yourself.'},
@@ -111,7 +110,7 @@ class FollowUserView(APIView):
                 )
             request.user.follow(user_to_follow)
             return Response(status=status.HTTP_200_OK)
-        except CustomUser.DoesNotExist:
+        except User.DoesNotExist:
             return Response(
                 {'error': 'User not found.'},
                 status=status.HTTP_404_NOT_FOUND
@@ -122,10 +121,10 @@ class UnfollowUserView(APIView):
 
     def post(self, request, user_id):
         try:
-            user_to_unfollow = CustomUser.objects.get(id=user_id)
+            user_to_unfollow = User.objects.get(id=user_id)
             request.user.unfollow(user_to_unfollow)
             return Response(status=status.HTTP_200_OK)
-        except CustomUser.DoesNotExist:
+        except User.DoesNotExist:
             return Response(
                 {'error': 'User not found.'},
                 status=status.HTTP_404_NOT_FOUND

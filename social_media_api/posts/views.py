@@ -2,10 +2,14 @@ from django.shortcuts import render
 from rest_framework import viewsets, permissions, filters, response
 from rest_framework.pagination import PageNumberPagination
 from django_filters.rest_framework import DjangoFilterBackend
-from .models import Post, Comment
-from .serializers import PostSerializer, CommentSerializer
+from .models import Post, Comment, Like
+from .serializers import PostSerializer, CommentSerializer, LikeSerializer
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from django.shortcuts import get_object_or_404
+from notifications.models import Notification
+from django.contrib.contenttypes.models import ContentType
+from rest_framework import status
 
 class StandardResultsSetPagination(PageNumberPagination):
     page_size = 10
@@ -30,6 +34,46 @@ class PostViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
+
+    @action(detail=True, methods=['post'])
+    def like(self, request, pk=None):
+        post = self.get_object()
+        user = request.user
+        
+        # Check if user already liked the post
+        if Like.objects.filter(user=user, post=post).exists():
+            return Response(
+                {'error': 'You have already liked this post.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Create like
+        like = Like.objects.create(user=user, post=post)
+        
+        # Create notification for post author
+        if post.author != user:
+            Notification.objects.create(
+                recipient=post.author,
+                actor=user,
+                verb='like',
+                content_type=ContentType.objects.get_for_model(post),
+                object_id=post.id
+            )
+        
+        return Response(
+            LikeSerializer(like).data,
+            status=status.HTTP_201_CREATED
+        )
+
+    @action(detail=True, methods=['post'])
+    def unlike(self, request, pk=None):
+        post = self.get_object()
+        user = request.user
+        
+        like = get_object_or_404(Like, user=user, post=post)
+        like.delete()
+        
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=False, methods=['get'])
     def feed(self, request):
@@ -57,4 +101,14 @@ class CommentViewSet(viewsets.ModelViewSet):
     ordering = ['-created_at']
 
     def perform_create(self, serializer):
-        serializer.save(author=self.request.user)
+        comment = serializer.save(author=self.request.user)
+        
+        # Create notification for post author when someone comments
+        if comment.post.author != self.request.user:
+            Notification.objects.create(
+                recipient=comment.post.author,
+                actor=self.request.user,
+                verb='comment',
+                content_type=ContentType.objects.get_for_model(comment.post),
+                object_id=comment.post.id
+            )
