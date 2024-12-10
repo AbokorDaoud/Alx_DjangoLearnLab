@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from rest_framework import viewsets, permissions, filters, response
+from rest_framework import viewsets, permissions, filters, response, status
 from rest_framework.pagination import PageNumberPagination
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import Post, Comment, Like
@@ -9,7 +9,7 @@ from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from notifications.models import Notification
 from django.contrib.contenttypes.models import ContentType
-from rest_framework import status
+from django.db import IntegrityError
 
 class StandardResultsSetPagination(PageNumberPagination):
     page_size = 10
@@ -37,42 +37,38 @@ class PostViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def like(self, request, pk=None):
-        post = self.get_object()
-        user = request.user
-        
-        # Check if user already liked the post
-        if Like.objects.filter(user=user, post=post).exists():
+        post = get_object_or_404(Post, pk=pk)
+        try:
+            like, created = Like.objects.get_or_create(user=request.user, post=post)
+            if created:
+                # Create notification for post author
+                if post.author != request.user:
+                    Notification.objects.create(
+                        recipient=post.author,
+                        actor=request.user,
+                        verb='like',
+                        content_type=ContentType.objects.get_for_model(post),
+                        object_id=post.id
+                    )
+                return Response(
+                    LikeSerializer(like).data,
+                    status=status.HTTP_201_CREATED
+                )
             return Response(
                 {'error': 'You have already liked this post.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
-        # Create like
-        like = Like.objects.create(user=user, post=post)
-        
-        # Create notification for post author
-        if post.author != user:
-            Notification.objects.create(
-                recipient=post.author,
-                actor=user,
-                verb='like',
-                content_type=ContentType.objects.get_for_model(post),
-                object_id=post.id
+        except IntegrityError:
+            return Response(
+                {'error': 'You have already liked this post.'},
+                status=status.HTTP_400_BAD_REQUEST
             )
-        
-        return Response(
-            LikeSerializer(like).data,
-            status=status.HTTP_201_CREATED
-        )
 
     @action(detail=True, methods=['post'])
     def unlike(self, request, pk=None):
-        post = self.get_object()
-        user = request.user
-        
-        like = get_object_or_404(Like, user=user, post=post)
+        post = get_object_or_404(Post, pk=pk)
+        like = get_object_or_404(Like, user=request.user, post=post)
         like.delete()
-        
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=False, methods=['get'])
